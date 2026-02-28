@@ -6,330 +6,138 @@
 
 #Contiene la lógica del veredicto: Si el SDK devuelve 3 Pokémon, este archivo calcula cuál es el "ganador" basándose en los stats.
 
-import os
-import re
-from typing import Any, Dict, List, Optional, Tuple
-
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-
-from sdk import DenodoAISDKClient, DenodoAISDKError
-
-
-app = FastAPI(title="Decision Tool Backend", version="1.0.0")
-
-sdk = DenodoAISDKClient()
-
-
-# ----------------------------
-# Models
-# ----------------------------
-
-class DecideConstraints(BaseModel):
-    legendary: Optional[bool] = None
-    type1: Optional[str] = None
-    min_speed: Optional[float] = None
-    min_attack: Optional[float] = None
-
-
-class DecideWeights(BaseModel):
-    attack: float = 0.5
-    speed: float = 0.3
-    defense: float = 0.2
-    hp: float = 0.0
-
+from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+from sdk import DenodoAISDKClient
 
 class DecideRequest(BaseModel):
-    constraints: DecideConstraints = Field(default_factory=DecideConstraints)
-    weights: DecideWeights = Field(default_factory=DecideWeights)
-    top_k: int = 5
+    topic: str                    
+    filters: Dict[str, Any]       
+    scoring_weights: Dict[str, float] 
+    top_k: int = 3      
 
+app = FastAPI()
 
-class RankedItem(BaseModel):
-    name: str
-    score: float
-    features: Dict[str, Any]
-    reasons: List[str]
+sdk = DenodoAISDKClient(auth_header="Basic YWRtaW46YWRtaW4=") # Autenticacion basica admin:admin
 
+def _extract_rows(data_answer: dict) -> list:
 
-class DecideResponse(BaseModel):
-    recommended: RankedItem
-    top: List[RankedItem]
-    evidence: Dict[str, Any]
+    execution_result = data_answer.get("execution_result", {})
+    if not isinstance(execution_result, dict):
+        return []
 
-
-# ----------------------------
-# Helpers
-# ----------------------------
-
-def _extract_view_name(metadata_answer: Dict[str, Any]) -> Optional[str]:
-    """
-    Intenta sacar el nombre de la view desde la respuesta del SDK.
-    Como el formato puede variar, hacemos heurística:
-    - Busca algo que parezca nombre de view en el texto "answer"
-    - Si hay campos estructurados, úsalo
-    """
-    # 1) si viene "views" o similar (depende de implementación)
-    for key in ("views", "view_ids", "allowed_views", "results", "metadata"):
-        val = metadata_answer.get(key)
-        if isinstance(val, list) and val:
-            # intenta encontrar strings
-            for item in val:
-                if isinstance(item, str) and item.strip():
-                    return item.strip()
-                if isinstance(item, dict):
-                    # comunes: name, view, id
-                    for k in ("name", "view", "view_name", "id", "view_id"):
-                        if isinstance(item.get(k), str) and item[k].strip():
-                            return item[k].strip()
-
-    # 2) intenta en el texto "answer"
-    ans = metadata_answer.get("answer")
-    if isinstance(ans, str) and ans.strip():
-        # busca token tipo pokemon_view / admin.pokemon / etc
-        m = re.search(r"\b([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\b", ans)
-        if m:
-            return m.group(1)
-        m2 = re.search(r"\b([A-Za-z_][A-Za-z0-9_]*_view)\b", ans, re.IGNORECASE)
-        if m2:
-            return m2.group(1)
-
-    return None
-
-
-def _safe_float(x: Any) -> Optional[float]:
-    try:
-        if x is None:
-            return None
-        if isinstance(x, (int, float)):
-            return float(x)
-        s = str(x).strip()
-        if s == "":
-            return None
-        return float(s)
-    except Exception:
-        return None
-
-
-def _normalize(values: List[Optional[float]]) -> List[Optional[float]]:
-    nums = [v for v in values if isinstance(v, (int, float))]
-    if not nums:
-        return values
-    mn, mx = min(nums), max(nums)
-    if mx == mn:
-        return [1.0 if v is not None else None for v in values]
-    out: List[Optional[float]] = []
-    for v in values:
-        if v is None:
-            out.append(None)
-        else:
-            out.append((v - mn) / (mx - mn))
-    return out
-
-
-def _build_reasons(features: Dict[str, Any], weights: Dict[str, float]) -> List[str]:
-    # Explicación simple: top 2 contribuciones
-    contribs: List[Tuple[str, float]] = []
-    for k, w in weights.items():
-        v = _safe_float(features.get(k))
-        if v is not None:
-            contribs.append((k, w * v))
-    contribs.sort(key=lambda t: t[1], reverse=True)
-    reasons = []
-    for k, c in contribs[:2]:
-        reasons.append(f"High {k} contribution (weight {weights[k]:.2f}).")
-    return reasons or ["Selected as best overall match to weights and constraints."]
-
-
-def _pick_row_dict(row: Any) -> Optional[Dict[str, Any]]:
-    """
-    El SDK puede devolver datos en distintas formas. Intentamos soportar:
-      - lista de dicts
-      - {"data":[{...}]}
-      - {"answer": "...tabla..."} (difícil)
-    """
-    if isinstance(row, dict):
-        return row
-    return None
-
-
-def _extract_rows(data_answer: Dict[str, Any]) -> List[Dict[str, Any]]:
-    # 1) claves típicas
-    for key in ("data", "rows", "result", "results"):
-        val = data_answer.get(key)
-        if isinstance(val, list) and val:
-            rows = []
-            for r in val:
-                rd = _pick_row_dict(r)
-                if rd:
-                    rows.append(rd)
-            if rows:
-                return rows
-
-    # 2) algunas respuestas vienen dentro de "answer" como markdown/tabla; no parseamos aquí.
-    return []
-
-
-# ----------------------------
-# Endpoints
-# ----------------------------
-
-@app.get("/health")
-def health() -> Dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.post("/decide", response_model=DecideResponse)
-def decide(req: DecideRequest) -> DecideResponse:
-    # ---- FASE 1 (obligatoria): Descubrimiento de metadatos
-    meta_q = (
-        "Identify which view contains Pokemon stats including Name, Type 1 (or Type_1), "
-        "Attack, Defense, Speed, HP and Legendary. Return the view name."
-    )
-    try:
-        meta = sdk.answer_metadata_question(meta_q, verbose=True)
-    except DenodoAISDKError as e:
-        raise HTTPException(status_code=502, detail=f"Metadata phase failed: {e}")
-
-    view_name = _extract_view_name(meta) or os.getenv("POKEMON_VIEW_NAME", "").strip()
-    if not view_name:
-        # si no se puede extraer automáticamente, pide al usuario que lo ponga en env
-        raise HTTPException(
-            status_code=500,
-            detail="Could not infer view name from metadata. Set POKEMON_VIEW_NAME env var (e.g. admin.pokemon_view).",
-        )
-
-    # ---- FASE 2 (obligatoria): Consulta de datos
-    c = req.constraints
-    filters = []
-    if c.legendary is not None:
-        filters.append(f"Legendary = {str(c.legendary).lower()}")
-    if c.type1:
-        # distintas columnas posibles
-        filters.append(f"(\"Type 1\" = '{c.type1}' OR Type_1 = '{c.type1}' OR Type1 = '{c.type1}')")
-    if c.min_speed is not None:
-        filters.append(f"Speed >= {c.min_speed}")
-    if c.min_attack is not None:
-        filters.append(f"Attack >= {c.min_attack}")
-
-    where_clause = ""
-    if filters:
-        where_clause = " where " + " AND ".join(filters)
-
-    data_q = (
-        f"From the view {view_name},{where_clause} return columns: "
-        "Name, Attack, Defense, Speed, HP, Legendary and Type 1 (or Type_1). "
-        "Limit to 200 rows."
-    )
-
-    try:
-        data = sdk.answer_data_question(
-            data_q,
-            verbose=True,
-            vql_execute_rows_limit=200,
-            llm_response_rows_limit=200,
-        )
-    except DenodoAISDKError as e:
-        raise HTTPException(status_code=502, detail=f"Data phase failed: {e}")
-
-    rows = _extract_rows(data)
-    if not rows:
-        # fallback: si el SDK devuelve solo texto en "answer", avisa para ajustar
-        raise HTTPException(
-            status_code=500,
-            detail="Data returned no structured rows. The SDK may be returning a textual table. "
-                   "Try lowering markdown_response or adjusting SDK settings.",
-        )
-
-    # ---- Scoring (vuestro motor)
-    weights = req.weights.model_dump()
-    # asegúrate de que suman algo > 0
-    if sum(max(0.0, float(w)) for w in weights.values()) <= 0:
-        raise HTTPException(status_code=400, detail="Weights must sum to > 0.")
-
-    # Extrae features numéricas
-    names: List[str] = []
-    attack: List[Optional[float]] = []
-    defense: List[Optional[float]] = []
-    speed: List[Optional[float]] = []
-    hp: List[Optional[float]] = []
-    feature_rows: List[Dict[str, Any]] = []
-
-    for r in rows:
-        name = r.get("Name") or r.get("name") or r.get("NAME")
-        if not name:
+    lista_final = []
+    
+    for row_key, columns in execution_result.items():
+        # Saltamos claves que no sean de filas si las hubiera
+        if not row_key.startswith("Row"):
             continue
 
-        names.append(str(name))
-        attack.append(_safe_float(r.get("Attack") or r.get("attack")))
-        defense.append(_safe_float(r.get("Defense") or r.get("defense")))
-        speed.append(_safe_float(r.get("Speed") or r.get("speed")))
-        hp.append(_safe_float(r.get("HP") or r.get("hp")))
-        feature_rows.append(r)
+        fila_objeto = {}
 
-    if not names:
-        raise HTTPException(status_code=500, detail="No usable rows after parsing Name/metrics.")
+        for col in columns:
+            nombre = col.get("columnName")
+            valor = col.get("value")
+            fila_objeto[nombre] = valor
+        
+        lista_final.append(fila_objeto)
+    
+    return lista_final
 
-    # Normaliza para scoring comparable
-    n_attack = _normalize(attack)
-    n_defense = _normalize(defense)
-    n_speed = _normalize(speed)
-    n_hp = _normalize(hp)
+@app.post("/decide")
+def decide(req: DecideRequest):
+    # Aqui la ia nos responderá con el nombre de la vista del datasource
+    meta_q = f"Identify the technical view name in Denodo that contains information about '{req.topic}'."
+    print(f"DEBUG: Pregunta de metadata -> {meta_q}")
+    
+    try:
+        # SDK buscará en los metadatos
+        meta_res = sdk.answer_metadata_question(meta_q)
+        print(f"DEBUG: Respuesta de metadata -> {meta_res}")
 
-    ranked: List[RankedItem] = []
-    for i, name in enumerate(names):
-        feats_norm = {
-            "attack": n_attack[i],
-            "defense": n_defense[i],
-            "speed": n_speed[i],
-            "hp": n_hp[i],
-        }
-        # penaliza missing con 0.4 por defecto (hackathon-friendly)
-        def val_or_default(v: Optional[float], default: float = 0.4) -> float:
-            return float(v) if v is not None else default
+        datasource = meta_res.get("tables_used", [None])[0] # Obtenemos la primera tabla usada (admin.tabla), o None si no hay tablas
+        
+        if not datasource:
+            raise HTTPException(status_code=404, detail=f"No se encontró ninguna tabla relacionada con '{req.topic}'.")
+        
+        tabla_limpia = datasource.split(".")[-1] # Obtenemos solo el nombre de la tabla sin el prefijo del datasource
+        print(f"DEBUG: Tabla encontrada -> {tabla_limpia}")
 
-        score = (
-            weights["attack"] * val_or_default(feats_norm["attack"]) +
-            weights["speed"] * val_or_default(feats_norm["speed"]) +
-            weights["defense"] * val_or_default(feats_norm["defense"]) +
-            weights["hp"] * val_or_default(feats_norm["hp"])
-        )
+        if req.topic.lower() not in tabla_limpia.lower():
+            raise HTTPException(status_code=400, detail=f"La tabla encontrada '{tabla_limpia}' no parece relevante para el tema '{req.topic}'.")
+        
+    except HTTPException as he:
+        raise he    
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error al buscar la tabla: {str(e)}")
+    
+    columnas_puntos = list(req.scoring_weights.keys())
 
-        # features originales (para mostrar)
-        original = feature_rows[i]
-        features_out = {
-            "Attack": original.get("Attack"),
-            "Defense": original.get("Defense"),
-            "Speed": original.get("Speed"),
-            "HP": original.get("HP"),
-            "Legendary": original.get("Legendary"),
-            "Type1": original.get("Type 1") or original.get("Type_1") or original.get("Type1"),
-        }
+    todas_las_cols = ["name"] + columnas_puntos
 
-        reasons = _build_reasons(
-            {"attack": val_or_default(feats_norm["attack"]),
-             "speed": val_or_default(feats_norm["speed"]),
-             "defense": val_or_default(feats_norm["defense"]),
-             "hp": val_or_default(feats_norm["hp"])},
-            weights,
-        )
+    columnas_sql = ", ".join([f'"{c}"' for c in todas_las_cols])
 
-        ranked.append(RankedItem(name=name, score=float(score), features=features_out, reasons=reasons))
+    print(f"DEBUG: Columnas que vamos a pedir -> {columnas_sql}")
 
-    ranked.sort(key=lambda x: x.score, reverse=True)
-    top = ranked[: max(1, req.top_k)]
+    where_clause = ""
+    if req.filters:
+        partes_filtro = []
+        for col, val in req.filters.items():
+            if isinstance(val, str):
+                partes_filtro.append(f"\"{col}\" = '{val}'")
+            # Si es número, va sin comillas
+            else:
+                partes_filtro.append(f"\"{col}\" = {val}")
+        
+        where_clause = " WHERE " + " AND ".join(partes_filtro)
 
-    evidence = {
-        "phase1_metadata_question": meta_q,
-        "phase1_raw": meta,
-        "inferred_view": view_name,
-        "phase2_data_question": data_q,
-        # no metemos todo "data" si es enorme; pero puedes si queréis trazabilidad total
-        "rows_used": len(ranked),
+
+    
+    # Montamos la query final (usamos view_full_name que tiene el admin.)
+    data_q = f"SELECT {columnas_sql} FROM {datasource}{where_clause} LIMIT 50"
+    print(f"DEBUG: Query final de datos -> {data_q}")
+    
+    try:
+        # Llamamos al SDK para obtener los datos reales
+        data_res = sdk.answer_data_question(data_q)
+        print(f"DEBUG: ROWS -> {data_res}")
+        
+        # Extraemos las filas de la respuesta (usando la funcion auxiliar)
+        # Asegúrate de tener definida _extract_rows fuera de 'decide'
+        rows = _extract_rows(data_res)
+        
+        if not rows:
+            return {"message": "No se encontraron elementos con esos filtros", "results": []}
+            
+        print(f"DEBUG: Hemos recuperado {len(rows)} filas de Denodo")
+
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error al extraer datos: {str(e)}")
+    
+    ranking = []
+    for item in rows:
+        score = 0
+        # Normalizamos las llaves a minúsculas para evitar fallos de Case Sensitivity
+        item_lower = {k.lower(): v for k, v in item.items()}
+        
+        for col, peso in req.scoring_weights.items():
+            val = item_lower.get(col.lower(), 0)
+            try:
+                score += float(val) * peso
+            except:
+                continue
+        
+        ranking.append({
+            "name": item_lower.get("name", "Unknown"),
+            "score": round(score, 2)
+        })
+
+    # Ordenar y cortar por top_k
+    ranking.sort(key=lambda x: x["score"], reverse=True)
+    
+    return {
+        "tema": req.topic,
+        "tabla": tabla_limpia,
+        "ganadores": ranking[:req.top_k]
     }
-
-    return DecideResponse(
-        recommended=top[0],
-        top=top,
-        evidence=evidence,
-    )
