@@ -9,9 +9,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Any, Dict, List
-from sdk import DenodoAISDKClient, DenodoAISDKError
-import re, json
+from typing import Any, Dict
+from sdk import DenodoAISDKClient
+import json
 
 class DecideRequest(BaseModel):
     topic: str                    
