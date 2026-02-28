@@ -1,1 +1,59 @@
-<!--Estructura de los elementos en pantalla--!>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de IA y clasificación de documentos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Análisis y Gestión Documental</h1>
+    </header>
+
+    <main class="container">
+        <section id="denodo-section" class="panel">
+            <h2>Investigación Autónoma (AI SDK)</h2>
+            <p class="subtitle">Toma de decisiones basada en datos de Denodo [cite: 14]</p>
+            
+            <div id="chat-container">
+                <div id="chat-messages">
+                    </div>
+                <div class="input-group">
+                    <input type="text" id="user-query" placeholder="Ej: ¿Qué Pokémon es mejor contra tipo Fuego?">
+                    <button onclick="sendQuery()">Analizar</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="merlin-section" class="panel">
+            <h2>Gestión Documental Inteligente</h2>
+            <p class="subtitle">Búsqueda y clasificación de documentación corporativa </p>
+
+            <div id="upload-zone" class="drop-zone">
+                <p>Arrastra tus PDFs aquí o haz clic para subir</p>
+                <input type="file" id="file-input" hidden>
+            </div>
+
+            <div class="table-controls">
+                <input type="text" id="filter-input" placeholder="Filtrar por etiqueta o autor...">
+            </div>
+
+            <table id="document-table">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Categoría</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody id="document-list">
+                    </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html><!--Estructura de los elementos en pantalla--!>
