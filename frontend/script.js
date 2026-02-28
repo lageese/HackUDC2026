@@ -130,7 +130,6 @@ document.getElementById('filter-input').onkeyup = function() {
 
 document.querySelectorAll('input[name="dataset-selection"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
-        // Actualizamos el input hidden que lee tu función sendQuery()
         document.getElementById('dataset-select').value = e.target.value;
         console.log("Dataset cambiado a:", e.target.value);
     });
@@ -141,23 +140,18 @@ function renderizarRanking(data, explanation, weights = {}) {
 
     const hasScore = weights && Object.keys(weights).length > 0;
     
-    // 1. Empezamos el mensaje con la explicación de la IA
-    // Usamos backticks (`) para poder meter HTML fácilmente
     let html = `
         <div class="ai-msg">
         ${explanation || "He encontrado estos resultados para ti:"}
             <br><hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
     `;
     
-    // 2. Comprobamos si hay resultados en el array ganadores
     if (data.ganadores && data.ganadores.length > 0) {
         
-        // Definimos iconos para el Top 3
         const medals = ["🥇", "🥈", "🥉"];
 
-        // 3. Iteramos sobre los resultados
         data.ganadores.forEach((item, index) => {
-            const icon = medals[index] || "·"; // Si hay más de 3, usa un punto
+            const icon = medals[index] || "·";
             const scoreDisplay = hasScore ? `<span class="score-tag">(Puntuación: ${item.score})</span>` : "";
             
             html += `
@@ -167,24 +161,19 @@ function renderizarRanking(data, explanation, weights = {}) {
             `;
         });
     } else {
-        // Si la lista está vacía
         html += `<p>No se han encontrado registros que coincidan con los criterios.</p>`;
     }
 
-    html += `</div>`; // Cerramos el div principal
+    html += `</div>`;
 
-    // 4. Inyectamos todo el HTML de golpe en el chat
     chatMessages.innerHTML += html;
 
-    // 5. Scroll automático hacia abajo para ver el nuevo mensaje
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Función de validación para CSV
 function validarYProcesar(file) {
     if (!file) return;
 
-    // Comprobamos extensión .csv
     if (file.name.toLowerCase().endsWith('.csv')) {
         procesarDocumento(file);
     } else {
@@ -192,7 +181,6 @@ function validarYProcesar(file) {
     }
 }
 
-// Añadir a la tabla (Simulacro)
 async function procesarDocumento(file) {
     const lista = document.getElementById('document-list');
     const nuevaFila = document.createElement('tr');
@@ -272,13 +260,12 @@ document.getElementById('filter-input').onkeyup = function() {
         const texto = fila.innerText.toLowerCase();
         if(texto.includes(valor)) {
             fila.style.display = '';
-            fila.style.backgroundColor = valor !== "" ? "rgba(46, 204, 113, 0.1)" : ""; // Resaltado suave
+            fila.style.backgroundColor = valor !== "" ? "rgba(46, 204, 113, 0.1)" : "";
             encontrados++;
         } else {
             fila.style.display = 'none';
         }
     });
 
-    // Pequeño feedback de cuántos documentos hay
     console.log(`Filtrando: ${encontrados} documentos encontrados.`);
 };
