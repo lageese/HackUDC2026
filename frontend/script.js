@@ -237,11 +237,20 @@ async function procesarDocumento(file) {
     }
 
     const filaReal = document.getElementById(idUnico);
+    const fileURL = URL.createObjectURL(file);
+
     filaReal.innerHTML = `
-        <td><strong>${file.name}</strong> (${tamano})</td>
+        <td>
+            <strong class="doc-link" style="cursor:pointer; color:#2ecc71;">
+                ${file.name}
+            </strong> (${tamano})
+        </td>
         <td><span class="tag success">${categoriaFinal}</span></td>
         <td>${fecha}</td>
     `;
+    filaReal.querySelector('.doc-link').addEventListener('click', () => {
+        window.open(fileURL, '_blank');
+    });
 
     const chatMessages = document.getElementById('chat-messages');
     chatMessages.innerHTML += `

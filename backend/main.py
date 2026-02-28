@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Dict
 from sdk import DenodoAISDKClient
-import service
 import ollama
 import json
 
