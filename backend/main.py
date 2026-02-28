@@ -9,14 +9,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Any, Dict
-from sdk import DenodoAISDKClient
+from typing import Any, Dict, List
+from sdk import DenodoAISDKClient, DenodoAISDKError
+import re, json
 
 class DecideRequest(BaseModel):
     topic: str                    
     filters: Dict[str, Any]       
     scoring_weights: Dict[str, float] 
-    top_k: int = 3      
+    top_k: int    
 
 app = FastAPI()
 
@@ -62,12 +63,10 @@ def home():
 def decide(req: DecideRequest):
     # Aqui la ia nos responderá con el nombre de la vista del datasource
     meta_q = f"Identify the technical view name in Denodo that contains information about '{req.topic}'."
-    print(f"DEBUG: Pregunta de metadata -> {meta_q}")
     
     try:
         # SDK buscará en los metadatos
         meta_res = sdk.answer_metadata_question(meta_q)
-        print(f"DEBUG: Respuesta de metadata -> {meta_res}")
 
         datasource = meta_res.get("tables_used", [None])[0] # Obtenemos la primera tabla usada (admin.tabla), o None si no hay tablas
         
@@ -98,7 +97,8 @@ def decide(req: DecideRequest):
         partes_filtro = []
         for col, val in req.filters.items():
             if isinstance(val, str):
-                partes_filtro.append(f"\"{col}\" = '{val}'")
+                valor_upper=val.upper().strip()
+                partes_filtro.append(f"UPPER(\"{col}\") = '{valor_upper}'")
             # Si es número, va sin comillas
             else:
                 partes_filtro.append(f"\"{col}\" = {val}")
@@ -108,7 +108,7 @@ def decide(req: DecideRequest):
 
     
     # Montamos la query final (usamos view_full_name que tiene el admin.)
-    data_q = f"SELECT {columnas_sql} FROM {datasource}{where_clause} LIMIT 50"
+    data_q = f"SELECT {columnas_sql} FROM {datasource}{where_clause} LIMIT 10"
     print(f"DEBUG: Query final de datos -> {data_q}")
     
     try:
@@ -125,6 +125,8 @@ def decide(req: DecideRequest):
             
         print(f"DEBUG: Hemos recuperado {len(rows)} filas de Denodo")
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Error al extraer datos: {str(e)}")
     
@@ -154,3 +156,64 @@ def decide(req: DecideRequest):
         "tabla": tabla_limpia,
         "ganadores": ranking[:req.top_k]
     }
+
+class InterpretRequest(BaseModel):
+    prompt: str
+    dataset: str
+
+@app.post("/interpret")
+def interpret_query(req: InterpretRequest):
+    try:
+        # PASO 1: Obtener esquema de la tabla elegida
+        # Esto le dice a la IA qué columnas tiene esa tabla específicamente
+        meta_q = f"Describe columns for the table {req.dataset}"
+        meta_res = sdk.answer_metadata_question(meta_q)
+        
+        views = meta_res.get("execution_result", {}).get("views", [])
+        if not views:
+            raise HTTPException(status_code=404, detail="Tabla no encontrada")
+
+        columnas = [c['columnName'] for c in views[0]['view_json']['schema']]
+
+        # PASO 2: Traducción Directa
+        # Usamos un prompt ultra-estricto para evitar textos de relleno
+        prompt_maestro = f"""
+        Dataset: {req.dataset}
+        Columns: {columnas}
+        User Query: "{req.prompt}"
+
+        Instructions:
+        1. If the query cannot be answered with these columns, return: {{"error": "incompatible"}}
+        2. Otherwise, return ONLY a JSON with this structure:
+        {{
+          "topic": "{req.dataset}",
+          "filters": {{"column": "value"}},
+          "scoring_weights": {{"numeric_column": 1.0}},
+          "explanation": "short text",
+          "top_k": int
+        }}
+        """
+
+        # Llamada a la IA para el mapeo
+        final_res = sdk.answer_metadata_question(prompt_maestro)
+        raw_answer = final_res.get("answer", "")
+
+        # PASO 3: Limpieza Quirúrgica (Buscamos solo el JSON)
+        start = raw_answer.find('{')
+        end = raw_answer.rfind('}')
+        
+        if start == -1:
+            raise HTTPException(status_code=422, detail="No se pudo generar JSON")
+
+        clean_json = json.loads(raw_answer[start:end+1])
+
+        # Si la IA determinó que no puede mapear la pregunta a esas columnas
+        if "error" in clean_json:
+            raise HTTPException(status_code=422, detail="Pregunta incompatible con el dataset")
+
+        return clean_json
+
+    except Exception as e:
+        if isinstance(e, HTTPException): raise e
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Error en la interpretación")
