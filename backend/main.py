@@ -7,8 +7,9 @@
 #Contiene la lógica del veredicto: Si el SDK devuelve 3 Pokémon, este archivo calcula cuál es el "ganador" basándose en los stats.
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 from sdk import DenodoAISDKClient
 
 class DecideRequest(BaseModel):
@@ -18,6 +19,14 @@ class DecideRequest(BaseModel):
     top_k: int = 3      
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # Permite que cualquier página web te consulte
+    allow_credentials=True,
+    allow_methods=["*"],      # Permite POST, OPTIONS, GET, etc.
+    allow_headers=["*"],      # Permite todos los encabezados
+)
 
 sdk = DenodoAISDKClient(auth_header="Basic YWRtaW46YWRtaW4=") # Autenticacion basica admin:admin
 
@@ -44,6 +53,10 @@ def _extract_rows(data_answer: dict) -> list:
         lista_final.append(fila_objeto)
     
     return lista_final
+
+@app.get("/")
+def home():
+    return {"status": "online", "message": "Ranking Engine de Denodo listo"}
 
 @app.post("/decide")
 def decide(req: DecideRequest):

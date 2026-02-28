@@ -1,40 +1,64 @@
 async function sendQuery() {
     const input = document.getElementById('user-query');
     const chatMessages = document.getElementById('chat-messages');
-    const query = input.value;
+    const query = input.value.trim();
 
+    // Si el usuario no escribió nada, no hacemos nada
     if (!query) return;
 
+    // Mostramos el mensaje del usuario en el chat
     chatMessages.innerHTML += `<div class="user-msg"><strong>Tú:</strong> ${query}</div>`;
-    input.value = "";
+    input.value = ""; // Limpiamos el input
 
     try {
-        const response = await fetch('http://localhost:8008/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: query })
+        // Usamos await para esperar la respuesta del backend
+        const response = await fetch('http://localhost:8000/decide', {
+            method: 'POST', // Indicamos el tipo de petición
+            headers: {
+                'Content-Type': 'application/json'  // Vamos a enviar JSON
+            },
+            body: JSON.stringify({
+                topic: query,
+                filters: {}, // Por ahora vacío
+                scoring_weights: {
+                    "attack": 0.5,
+                    "speed": 0.5
+                },
+                top_k: 3
+            })
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Error en el servidor');
+        }
+
         const data = await response.json();
-        chatMessages.innerHTML += `<div class="ai-msg"><strong>IA:</strong> ${data.response}</div>`;
+
+        // 3. Renderizar los resultados de forma bonita
+        let aiResponse = `<div class="ai-msg">
+            <strong>IA:</strong> He analizado la tabla <i>${data.tabla}</i>. Aquí tienes el Top ${data.ganadores.length}:
+            <div class="ranking-list">`;
+        
+        data.ganadores.forEach((p, index) => {
+            aiResponse += `
+                <div class="ranking-item">
+                    <span class="medal">${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>
+                    <strong>${p.name}</strong> - Score: ${p.score}
+                </div>`;
+        });
+
+        aiResponse += `</div></div>`;
+        chatMessages.innerHTML += aiResponse;
+
     } catch (error) {
-        chatMessages.innerHTML += `<div class="error">Error de conexión con AI SDK</div>`;
+        // Manejo de errores (ej: si pones "coches" y no hay tabla)
+        chatMessages.innerHTML += `<div class="error-msg"><strong>⚠️ Error:</strong> ${error.message}</div>`;
     }
     
+    // Auto-scroll al final
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
-const dropZone = document.getElementById('upload-zone');
-const fileInput = document.getElementById('file-input');
-
-dropZone.onclick = () => fileInput.click();
-
-fileInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        procesarDocumento(file);
-    }
-};
 
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
