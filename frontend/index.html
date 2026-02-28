@@ -3,33 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de IA y clasificación de documentos</title>
+    <title>AI Platform | Denodo & Merlin</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>Análisis y Gestión Documental</h1>
-    </header>
 
-    <main class="container">
-        <section id="denodo-section" class="panel">
-            <h2>Investigación Autónoma (AI SDK)</h2>
-            <p class="subtitle">Toma de decisiones basada en datos de Denodo [cite: 14]</p>
-            
-            <div id="chat-container">
-                <div id="chat-messages">
-                    </div>
-                <div class="input-group">
-                    <input type="text" id="user-query" placeholder="Ej: ¿Qué Pokémon es mejor contra tipo Fuego?">
-                    <button onclick="sendQuery()">Analizar</button>
-                </div>
+    <aside class="sidebar">
+        <div class="logo">
+            <span class="dot"></span> AI CORE
+        </div>
+        <nav>
+            <button class="nav-btn active" onclick="switchTab('ai')">
+                <span class="icon">🤖</span> INVESTIGACIÓN IA
+            </button>
+            <button class="nav-btn" onclick="switchTab('docs')">
+                <span class="icon">📁</span> DOCUMENTOS
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            v1.2.0 | Denodo SDK
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <section id="ai-view" class="content-view">
+            <div class="view-header">
+                <h1>Investigación Autónoma</h1>
+                <p class="subtitle">Análisis de datos en tiempo real mediante Denodo</p>
             </div>
-
-            <div class="dataset-container">
-                <label class="dataset-label">Dataset Activo</label>
+            
+            <div class="dataset-container" style="margin-bottom: 20px;">
+                <label class="dataset-label" style="display: block; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Dataset Activo</label>
                 
                 <ul id="dataset-list" class="dataset-list" role="listbox" aria-label="Selección de dataset">
-                    <li class="dataset-item selected" role="option" aria-selected="true" data-value="digimon">
+                    <li class="dataset-item selected" role="option" aria-selected="true" data-value="pokemon">
                         🐉 Pokémon Database
                         <span class="tick">✓</span>
                     </li>
@@ -37,36 +45,56 @@
 
                 <input type="hidden" id="dataset-select" name="dataset_selected" value="admin.pokemon">
             </div>
+
+            <div id="chat-container">
+                <div id="chat-messages">
+                    <div class="message ai">Bienvenido al núcleo de datos. ¿Qué deseas analizar hoy?</div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="user-query" placeholder="Ej: ¿Qué Pokémon es mejor contra tipo Fuego?">
+                    <button class="btn-glow" onclick="sendQuery()">ANALIZAR</button>
+                </div>
+            </div>
         </section>
 
-        <section id="merlin-section" class="panel">
-            <h2>Gestión Documental Inteligente</h2>
-            <p class="subtitle">Búsqueda y clasificación de documentación corporativa </p>
+        <section id="docs-view" class="content-view" style="display: none;">
+            <div class="view-header">
+                <h1>Gestión Documental</h1>
+                <p class="subtitle">Búsqueda y clasificación inteligente Merlin</p>
+            </div>
 
             <div id="upload-zone" class="drop-zone">
-                <p>Arrastra tus PDFs aquí o haz clic para subir</p>
+                <p>Arrastra tus PDFs aquí o <span>haz clic para subir</span></p>
                 <input type="file" id="file-input" hidden>
             </div>
 
-            <div class="table-controls">
-                <input type="text" id="filter-input" placeholder="Filtrar por etiqueta o autor...">
-            </div>
+            <div class="table-container">
+                <div class="table-controls" style="margin-bottom: 20px;">
+                    <input type="text" id="filter-input" placeholder="Filtrar por etiqueta o autor..." style="width: 100%; max-width: 300px;">
+                </div>
 
-            <table id="document-table">
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Autor</th>
-                        <th>Categoría</th>
-                        <th>Fecha</th>
-                    </tr>
-                </thead>
-                <tbody id="document-list">
+                <table id="document-table">
+                    <thead>
+                        <tr>
+                            <th>TÍTULO</th>
+                            <th>AUTOR</th>
+                            <th>CATEGORÍA</th>
+                            <th>FECHA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="document-list">
+                        <tr>
+                            <td>Reporte_Estrategia.pdf</td>
+                            <td>Admin</td>
+                            <td><span class="badge">Análisis</span></td>
+                            <td>2024-05-20</td>
+                        </tr>
                     </tbody>
-            </table>
+                </table>
+            </div>
         </section>
     </main>
 
     <script src="script.js"></script>
 </body>
-</html><!--Estructura de los elementos en pantalla--!>
+</html>
