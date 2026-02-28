@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import service  # Corregido el nombre
-from pydantic import BaseModel
-import ollama # <--- Importa la librería
+import service
+import ollama
+import json
 
 app = FastAPI(title="HackUDC Decision Engine API")
 
@@ -15,17 +15,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -------- MODELOS --------
+
 class ProblemRequest(BaseModel):
     problem: str
+
+class CSVAnalysisRequest(BaseModel):
+    headers: list[str]
+    sample_data: list[str]
+
+# -------- ENDPOINTS --------
 
 @app.post("/api/decide")
 async def get_decision(request: ProblemRequest):
     try:
-        # Usamos el módulo services
         result = await service.process_decision(request.problem)
         return {"status": "success", "data": result}
     except Exception as e:
-        # Log del error real en consola para debuggear
         print(f"DEBUG ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -33,41 +39,63 @@ async def get_decision(request: ProblemRequest):
 async def health_check():
     return {"status": "ok"}
 
-class CSVAnalysisRequest(BaseModel):
-    headers: list[str]
-    sample_data: list[str]
-
-@app.post("/api/clasificar-csv")
-
-
-# ... (tus otros imports y configuración de CORS)
-
-class CSVAnalysisRequest(BaseModel):
-    headers: list[str]
-    sample_data: list[str]
-
 @app.post("/api/clasificar-csv")
 async def clasificar_csv(req: CSVAnalysisRequest):
-    # Construimos el prompt 
+
     prompt = f"""
-    Eres un clasificador de bases de datos experto.
-    Analiza las siguientes columnas de un archivo CSV: {req.headers}
-    Aquí tienes una fila de ejemplo con datos reales: {req.sample_data}
-    
-    Deduce la categoría principal de esta base de datos. 
-    Responde ÚNICAMENTE con el nombre de la categoría (máximo 3 palabras, ej: 'Fútbol Histórico', 'Recursos Humanos').
+    Eres un experto en clasificación de bases de datos.
+
+    Analiza las siguientes columnas:
+    {req.headers}
+
+    Y esta fila de ejemplo:
+    {req.sample_data}
+
+    Tu tarea:
+    1. Determinar la temática real de la base de datos.
+    2. Responder SOLO con un JSON válido.
+    3. No incluyas explicaciones ni texto adicional.
+
+    Reglas:
+    - "categoria" debe ser una categoría REAL basada en el contenido.
+    - Máximo 3 palabras.
+    - No uses frases como "max 3 palabras" o "5 palabras".
+    - No repitas las instrucciones.
+    - No uses markdown.
+    - Devuelve únicamente el objeto JSON.
+
+    Formato obligatorio:
+
+    {{
+    "categoria": "<categoria real>",
+    "confianza": "alta | media | baja",
+    "razon": "<breve justificacion basada en columnas>"
+    }}
     """
 
     try:
-        # Importante: Asegúrate de que el servicio de Ollama esté corriendo
-        response = ollama.generate(model='llama3', prompt=prompt)
-        
-        categoria_detectada = response['response'].strip()
-        # Limpieza rápida
-        categoria_detectada = categoria_detectada.replace('"', '').replace('.', '').replace("'", "")
-        
-        return {"categoria": categoria_detectada}
+        response = ollama.generate(
+            model='llama3',
+            prompt=prompt,
+            options={"temperature": 0}
+        )
+
+        raw = response['response'].strip()
+
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            print("Respuesta inválida:", raw)
+            return {
+                "categoria": "Error IA",
+                "confianza": "baja",
+                "razon": "JSON invalido"
+            }
 
     except Exception as e:
         print(f"Error con Ollama: {e}")
-        return {"categoria": "Datos Generales"}
+        return {
+            "categoria": "Error sistema",
+            "confianza": "baja",
+            "razon": "Fallo interno"
+        }

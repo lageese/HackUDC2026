@@ -101,74 +101,60 @@ function validarYProcesar(file) {
 // Añadir a la tabla (Simulacro)
 async function procesarDocumento(file) {
     const lista = document.getElementById('document-list');
+    const nuevaFila = document.createElement('tr');
     const idUnico = "doc-" + Date.now();
+    nuevaFila.id = idUnico;
+
     const fecha = new Date().toLocaleString();
     const tamano = (file.size / 1024).toFixed(2) + " KB";
 
-    // 1. Crear fila en estado "Analizando"
-    const nuevaFila = document.createElement('tr');
-    nuevaFila.id = idUnico;
     nuevaFila.innerHTML = `
-        <td><strong>${file.name}</strong> (${tamano})</td>
+        <td><strong>${file.name}</strong></td>
         <td><span class="tag processing">🤖 IA Clasificando...</span></td>
         <td>${fecha}</td>
     `;
     lista.appendChild(nuevaFila);
 
-    // 2. Leer el contenido del CSV para extraer metadatos
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const text = e.target.result;
-        const lines = text.split('\n');
-        
-        if (lines.length < 1) return;
+    let categoriaFinal = "Desconocida";
+    let razonIA = "No se pudo clasificar";
 
-        const headers = lines[0].split(',').map(h => h.trim());
-        const sampleData = lines.length > 1 ? lines[1].split(',').map(d => d.trim()) : [];
+    try {
 
-        try {
-            // 3. Llamada real a tu API de FastAPI
-            const response = await fetch('http://localhost:8008//api/clasificar-csv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    headers: headers,
-                    sample_data: sampleData
-                })
-            });
+        const payload = {
+            headers: [`Archivo: ${file.name}`],
+            sample_data: ["Sin datos de ejemplo"]
+        };
 
-            const result = await response.json();
-            const categoriaReal = result.categoria;
+        const response = await fetch('http://localhost:8000/api/clasificar-csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-            // 4. Actualizar la UI con la respuesta de Ollama
-            actualizarFila(idUnico, file.name, tamano, categoriaReal, fecha);
-            notificarChat(file.name, categoriaReal);
+        const data = await response.json();
+        console.log("Respuesta backend:", data);
 
-        } catch (error) {
-            console.error("Error clasificando:", error);
-            actualizarFila(idUnico, file.name, tamano, "Error IA", fecha);
-        }
-    };
+        categoriaFinal = data.categoria || "Sin categoría";
+        razonIA = data.razon || "Clasificado por IA";
 
-    reader.readAsText(file);
-}
+    } catch (error) {
+        console.error("Error clasificando con IA:", error);
+        categoriaFinal = "Error de IA";
+    }
 
-// Funciones auxiliares para limpiar el código
-function actualizarFila(id, nombre, tamano, categoria, fecha) {
-    const fila = document.getElementById(id);
-    fila.innerHTML = `
-        <td><strong>${nombre}</strong> (${tamano})</td>
-        <td><span class="tag success">${categoria}</span></td>
+    const filaReal = document.getElementById(idUnico);
+    filaReal.innerHTML = `
+        <td><strong>${file.name}</strong> (${tamano})</td>
+        <td><span class="tag success">${categoriaFinal}</span></td>
         <td>${fecha}</td>
     `;
-}
 
-function notificarChat(nombre, categoria) {
     const chatMessages = document.getElementById('chat-messages');
     chatMessages.innerHTML += `
         <div class="ai-msg">
-            <strong>SISTEMA:</strong> He analizado <em>${nombre}</em>.<br>
-            • <strong>Clasificación IA:</strong> ${categoria}.
+            <strong>SISTEMA:</strong> He procesado <em>${file.name}</em>.<br>
+            • <strong>Clasificación IA:</strong> ${categoriaFinal}.<br>
+            • <strong>Razón:</strong> ${razonIA}.
         </div>
     `;
     chatMessages.scrollTop = chatMessages.scrollHeight;
