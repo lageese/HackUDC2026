@@ -1,231 +1,277 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
 :root {
-    --primary: #2563eb;
-    --secondary: #1e293b;
-    --accent: #3b82f6;
-    --bg: #0f172a;
-    --panel-bg: #1e293b;
-    --text: #f8fafc;
-    --text-dim: #94a3b8;
-    --border: #334155;
+    --bg: #000000;
+    --side-bg: #080808;
+    --accent: #e2ff00; 
+    --panel-bg: #111111;
+    --text: #ffffff;
+    --text-dim: #666666;
+    --border: #222222;
+    --user-msg-bg: #1a1a1a;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg);
     color: var(--text);
-    line-height: 1.6;
+    display: flex; 
+    height: 100vh;
+    overflow: hidden;
 }
 
-header {
-    background: linear-gradient(90deg, #1e3a8a, #2563eb);
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+.sidebar {
+    width: 280px;
+    background-color: var(--side-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 40px 20px;
+    flex-shrink: 0;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    padding: 0 1rem;
+.logo {
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 50px;
 }
 
-.panel {
-    background: var(--panel-bg);
-    padding: 1.5rem;
+.dot {
+    width: 12px;
+    height: 12px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--accent);
+}
+
+.nav-btn {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 14px 18px;
+    text-align: left;
+    cursor: pointer;
     border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
 }
 
-h2 {
-    color: var(--accent);
-    margin-bottom: 0.5rem;
+.nav-btn:hover {
+    color: var(--text);
+    background: #151515;
+}
+
+.nav-btn.active {
+    background: var(--accent);
+    color: #000;
+}
+
+/*contenido principsl */
+.main-content {
+    flex-grow: 1;
+    padding: 60px;
+    overflow-y: auto;
+    background: radial-gradient(circle at top right, #111 0%, #000 100%);
+}
+
+.view-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin-bottom: 10px;
 }
 
 .subtitle {
-    font-size: 0.875rem;
     color: var(--text-dim);
-    margin-bottom: 1.5rem;
+    margin-bottom: 30px;
 }
 
-/* Chat Section */
+/*sección chat */
 #chat-container {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    height: calc(100vh - 280px);
     display: flex;
     flex-direction: column;
-    height: 400px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
 
 #chat-messages {
     flex-grow: 1;
     overflow-y: auto;
-    background: #0f172a;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    border: 1px solid var(--border);
-}
-
-.user-msg, .ai-msg {
-    margin-bottom: 10px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    max-width: 80%;
-}
-
-.user-msg {
-    background: var(--primary);
-    align-self: flex-end;
-    margin-left: auto;
-}
-
-.ai-msg {
-    background: var(--border);
-    align-self: flex-start;
-}
-
-.input-group {
+    padding: 30px;
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+}
+
+/* Burbujas de mensajes mejoradas */
+.user-msg-container {
+    align-self: flex-end;
+    margin-bottom: 20px;
+}
+
+.user-msg-container span {
+    background: var(--user-msg-bg);
+    color: var(--accent);
+    padding: 12px 20px;
+    border-radius: 18px 18px 0 18px;
+    display: inline-block;
+    border: 1px solid #333;
+}
+
+.message.ai {
+    background: #161616;
+    padding: 25px;
+    border-radius: 15px;
+    border-left: 4px solid var(--accent);
+    margin-bottom: 25px;
+    line-height: 1.6;
+    max-width: 85%;
+}
+
+/* área de input*/
+.input-area {
+    padding: 25px;
+    display: flex;
+    gap: 15px;
+    background: #0c0c0c;
+    border-top: 1px solid var(--border);
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
 }
 
 input[type="text"] {
     flex-grow: 1;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: #0f172a;
+    background: #000;
+    border: 1px solid #333;
+    padding: 15px 20px;
     color: white;
+    border-radius: 12px;
 }
 
-button {
-    padding: 0.75rem 1.5rem;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
-button:hover {
+.btn-glow {
     background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 0 30px;
+    font-weight: 800;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-transform: uppercase;
+    font-size: 0.8rem;
 }
 
-/* Document Section */
+.btn-glow:hover {
+    box-shadow: 0 0 20px rgba(226, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+/*sección documentos*/
 .drop-zone {
     border: 2px dashed var(--border);
-    padding: 2rem;
+    padding: 40px;
     text-align: center;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: border-color 0.2s;
-    margin-bottom: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    transition: 0.3s;
+    color: var(--text-dim);
 }
 
-.drop-zone:hover, .drop-zone.drag-over {
+.drop-zone:hover {
     border-color: var(--accent);
-    background: rgba(59, 130, 246, 0.05);
+    background: rgba(226, 255, 0, 0.02);
 }
 
 table {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
+    border-collapse: separate;
+    border-spacing: 0 10px;
 }
 
 th {
     text-align: left;
-    padding: 1rem;
-    background: #0f172a;
-    color: var(--accent);
+    padding: 15px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 td {
-    padding: 1rem;
+    padding: 20px 15px;
+    background: var(--panel-bg);
+    border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
 }
 
-.tag {
-    background: #1e3a8a;
-    padding: 2px 8px;
-    border-radius: 4px;
+td:first-child { border-left: 1px solid var(--border); border-radius: 12px 0 0 12px; }
+td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12px 0; }
+
+.badge, .tag {
+    background: rgba(226, 255, 0, 0.1);
+    color: var(--accent);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-weight: 600;
     font-size: 0.75rem;
 }
 
-@media (max-width: 900px) {
-    .container {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Contenedor principal del listado */
+/*listado de datasets*/
 .dataset-list {
-    list-style: none; /* Quita los puntos de la lista por defecto */
-    padding: 0;
-    margin: 0;
-    background-color: #1e1e1e; /* Fondo oscuro a juego */
-    border: 2px solid #333; /* Borde sutil */
-    border-radius: 8px; /* Bordes redondeados */
-    max-height: 250px; /* Limita la altura si hay muchos elementos */
-    overflow-y: auto; /* Añade scroll vertical si es necesario */
+    list-style: none;
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
     width: 100%;
-    max-width: 300px; /* Mantiene el ancho original */
+    margin-bottom: 20px;
 }
 
-/* Estilo para cada elemento del listado */
 .dataset-item {
-    color: #ffffff; /* Texto blanco */
-    padding: 12px 15px; /* Espaciado interno */
-    font-size: 1rem;
-    cursor: pointer; /* Muestra el puntero de mano */
-    transition: all 0.2s ease; /* Animación suave al pasar el ratón */
-    display: flex; /* Para alinear el texto y el tick */
-    justify-content: space-between; /* Texto a la izquierda, tick a la derecha */
-    align-items: center; /* Alineación vertical perfecta */
-    border-bottom: 1px solid #333; /* Línea divisoria entre elementos */
+    color: var(--text-dim);
+    padding: 15px;
+    transition: 0.2s;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
 }
 
-/* Quita el borde inferior del último elemento */
-.dataset-item:last-child {
-    border-bottom: none;
-}
-
-/* Efecto al pasar el ratón (hover) */
 .dataset-item:hover {
-    background-color: #252525; /* Fondo ligeramente más claro */
+    background-color: #1a1a1a;
+    color: var(--text);
 }
 
-/* Estilo sutil para el tick (✓) */
-.dataset-item .tick {
-    color: #4a9eff; /* Azul brillante */
-    font-weight: bold;
-    font-size: 1.2rem;
-    opacity: 0; /* Oculto por defecto */
-    transition: transform 0.2s ease, opacity 0.2s ease; /* Animación de aparición */
-    transform: scale(0.5); /* Empieza pequeño */
-}
-
-/* --- ESTILOS PARA EL ELEMENTO SELECCIONADO --- */
-
-/* Fondo del elemento seleccionado */
 .dataset-item.selected {
-    background-color: rgba(74, 158, 255, 0.1); /* Fondo azul muy sutil */
-    color: #4a9eff; /* Texto azul brillante */
-    border-left: 3px solid #4a9eff; /* Línea acento a la izquierda */
-    padding-left: 12px; /* Ajuste de padding para compensar la línea */
+    background-color: rgba(226, 255, 0, 0.05);
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
 }
 
-/* Muestra el tick en el elemento seleccionado */
 .dataset-item.selected .tick {
-    opacity: 1; /* Hace visible el tick */
-    transform: scale(1); /* Tamaño normal */
+    opacity: 1;
+    color: var(--accent);
 }
