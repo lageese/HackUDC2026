@@ -5,16 +5,6 @@ import service
 import ollama
 import json
 
-app = FastAPI(title="HackUDC Decision Engine API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # -------- MODELOS --------
 
 class ProblemRequest(BaseModel):
