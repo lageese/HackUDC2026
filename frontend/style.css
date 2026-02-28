@@ -166,3 +166,66 @@ td {
         grid-template-columns: 1fr;
     }
 }
+
+/* Contenedor principal del listado */
+.dataset-list {
+    list-style: none; /* Quita los puntos de la lista por defecto */
+    padding: 0;
+    margin: 0;
+    background-color: #1e1e1e; /* Fondo oscuro a juego */
+    border: 2px solid #333; /* Borde sutil */
+    border-radius: 8px; /* Bordes redondeados */
+    max-height: 250px; /* Limita la altura si hay muchos elementos */
+    overflow-y: auto; /* Añade scroll vertical si es necesario */
+    width: 100%;
+    max-width: 300px; /* Mantiene el ancho original */
+}
+
+/* Estilo para cada elemento del listado */
+.dataset-item {
+    color: #ffffff; /* Texto blanco */
+    padding: 12px 15px; /* Espaciado interno */
+    font-size: 1rem;
+    cursor: pointer; /* Muestra el puntero de mano */
+    transition: all 0.2s ease; /* Animación suave al pasar el ratón */
+    display: flex; /* Para alinear el texto y el tick */
+    justify-content: space-between; /* Texto a la izquierda, tick a la derecha */
+    align-items: center; /* Alineación vertical perfecta */
+    border-bottom: 1px solid #333; /* Línea divisoria entre elementos */
+}
+
+/* Quita el borde inferior del último elemento */
+.dataset-item:last-child {
+    border-bottom: none;
+}
+
+/* Efecto al pasar el ratón (hover) */
+.dataset-item:hover {
+    background-color: #252525; /* Fondo ligeramente más claro */
+}
+
+/* Estilo sutil para el tick (✓) */
+.dataset-item .tick {
+    color: #4a9eff; /* Azul brillante */
+    font-weight: bold;
+    font-size: 1.2rem;
+    opacity: 0; /* Oculto por defecto */
+    transition: transform 0.2s ease, opacity 0.2s ease; /* Animación de aparición */
+    transform: scale(0.5); /* Empieza pequeño */
+}
+
+/* --- ESTILOS PARA EL ELEMENTO SELECCIONADO --- */
+
+/* Fondo del elemento seleccionado */
+.dataset-item.selected {
+    background-color: rgba(74, 158, 255, 0.1); /* Fondo azul muy sutil */
+    color: #4a9eff; /* Texto azul brillante */
+    border-left: 3px solid #4a9eff; /* Línea acento a la izquierda */
+    padding-left: 12px; /* Ajuste de padding para compensar la línea */
+}
+
+/* Muestra el tick en el elemento seleccionado */
+.dataset-item.selected .tick {
+    opacity: 1; /* Hace visible el tick */
+    transform: scale(1); /* Tamaño normal */
+}
