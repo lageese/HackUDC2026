@@ -1,3 +1,21 @@
+function switchTab(view) {
+    const aiView = document.getElementById('ai-view');
+    const docsView = document.getElementById('docs-view');
+    const buttons = document.querySelectorAll('.nav-btn');
+
+    if (view === 'ai') {
+        aiView.style.display = 'block';
+        docsView.style.display = 'none';
+        buttons[0].classList.add('active');
+        buttons[1].classList.remove('active');
+    } else {
+        aiView.style.display = 'none';
+        docsView.style.display = 'block';
+        buttons[0].classList.remove('active');
+        buttons[1].classList.add('active');
+    }
+}
+
 async function sendQuery() {
     const input = document.getElementById('user-query');
     const chatMessages = document.getElementById('chat-messages');
