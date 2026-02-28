@@ -17,8 +17,6 @@ from sdk import DenodoAISDKClient
 import ollama
 import json
 
-# -------- MODELOS --------
-
 class ProblemRequest(BaseModel):
     problem: str
 
@@ -38,13 +36,13 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # Permite que cualquier página web te consulte
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],      # Permite POST, OPTIONS, GET, etc.
-    allow_headers=["*"],      # Permite todos los encabezados
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-sdk = DenodoAISDKClient(auth_header="Basic YWRtaW46YWRtaW4=") # Autenticacion basica admin:admin
+sdk = DenodoAISDKClient(auth_header="Basic YWRtaW46YWRtaW4=")
 
 @app.get("/health")
 async def health_check():
@@ -120,7 +118,6 @@ def _extract_rows(data_answer: dict) -> list:
     lista_final = []
     
     for row_key, columns in execution_result.items():
-        # Saltamos claves que no sean de filas si las hubiera
         if not row_key.startswith("Row"):
             continue
 
@@ -141,16 +138,14 @@ def home():
 
 @app.post("/decide")
 def decide(req: DecideRequest):
-    # Aqui la ia nos responderá con el nombre de la vista del datasource
     
     try:
-        # La base de datos será la escogida por el usuario
         datasource = req.topic
         
         if not datasource:
             raise HTTPException(status_code=404, detail=f"No se encontró ninguna tabla relacionada con '{req.topic}'.")
         
-        tabla_limpia = datasource.split(".")[-1] # Obtenemos solo el nombre de la tabla sin el prefijo del datasource
+        tabla_limpia = datasource.split(".")[-1]
 
         if req.topic.lower() not in tabla_limpia.lower():
             raise HTTPException(status_code=400, detail=f"La tabla encontrada '{tabla_limpia}' no parece relevante para el tema '{req.topic}'.")
@@ -174,7 +169,6 @@ def decide(req: DecideRequest):
             if isinstance(val, str):
                 valor_upper=val.upper().strip()
                 partes_filtro.append(f"UPPER(\"{col}\") = '{valor_upper}'")
-            # Si es número, va sin comillas
             else:
                 partes_filtro.append(f"\"{col}\" = {val}")
         
@@ -182,15 +176,11 @@ def decide(req: DecideRequest):
 
 
     
-    # Montamos la query final (usamos view_full_name que tiene el admin.)
     data_q = f"SELECT {columnas_sql} FROM {datasource}{where_clause} LIMIT 10"
     
     try:
-        # Llamamos al SDK para obtener los datos reales
         data_res = sdk.answer_data_question(data_q)
         
-        # Extraemos las filas de la respuesta (usando la funcion auxiliar)
-        # Asegúrate de tener definida _extract_rows fuera de 'decide'
         rows = _extract_rows(data_res)
         
         if not rows:
@@ -205,7 +195,6 @@ def decide(req: DecideRequest):
     for item in rows:
         score = 0
         nombre_real = item.get(display_col, "Desconocido")
-        # Normalizamos las llaves a minúsculas para evitar fallos de Case Sensitivity
         item_lower = {k.lower(): v for k, v in item.items()}
         
         for col, peso in req.scoring_weights.items():
@@ -220,7 +209,6 @@ def decide(req: DecideRequest):
             "score": round(score, 2)
         })
 
-    # Ordenar y cortar por top_k
     ranking.sort(key=lambda x: x["score"], reverse=True)
     
     return {
@@ -236,8 +224,6 @@ class InterpretRequest(BaseModel):
 @app.post("/interpret")
 def interpret_query(req: InterpretRequest):
     try:
-        # PASO 1: Obtener esquema de la tabla elegida
-        # Esto le dice a la IA qué columnas tiene esa tabla específicamente
         meta_q = f"Describe columns for the table {req.dataset}"
         meta_res = sdk.answer_metadata_question(meta_q)
         
@@ -247,8 +233,6 @@ def interpret_query(req: InterpretRequest):
 
         columnas = [c['columnName'] for c in views[0]['view_json']['schema']]
 
-        # PASO 2: Traducción Directa
-        # Usamos un prompt ultra-estricto para evitar textos de relleno
         prompt_maestro = f"""
         Dataset: {req.dataset}
         Columns: {columnas}
@@ -268,11 +252,9 @@ def interpret_query(req: InterpretRequest):
         }}
         """
 
-        # Llamada a la IA para el mapeo
         final_res = sdk.answer_metadata_question(prompt_maestro)
         raw_answer = final_res.get("answer", "")
 
-        # PASO 3: Limpieza Quirúrgica (Buscamos solo el JSON)
         start = raw_answer.find('{')
         end = raw_answer.rfind('}')
         
@@ -281,7 +263,6 @@ def interpret_query(req: InterpretRequest):
 
         clean_json = json.loads(raw_answer[start:end+1])
 
-        # Si la IA determinó que no puede mapear la pregunta a esas columnas
         if "error" in clean_json:
             raise HTTPException(status_code=422, detail="Pregunta incompatible con el dataset")
 

@@ -110,7 +110,7 @@ body {
     border-radius: 20px;
     display: flex;
     flex-direction: column;
-    height: 60vh; /* Altura fija para que el scroll funcione bien */
+    height: 60vh; 
     overflow: hidden;
 }
 
@@ -124,7 +124,7 @@ body {
 }
 
 .user-msg, .ai-msg {
-    max-width: 85%; /* Incrementado de 70% a 85% para aprovechar el ancho */
+    max-width: 85%;
     padding: 15px 20px;
     border-radius: 15px;
     line-height: 1.5;
@@ -135,7 +135,7 @@ body {
     background-color: var(--user-msg-bg);
     border: 1px solid var(--border);
     color: var(--text);
-    width: 100%; /* La IA suele dar respuestas largas, que use todo el ancho */
+    width: 100%;
 }
 
 .user-msg {
@@ -159,7 +159,7 @@ body {
     border: 1px solid #333;
 }
 #user-query {
-    flex: 1; /* El input ocupa todo el espacio sobrante */
+    flex: 1;
     background: transparent;
     border: 1px solid var(--border);
     padding: 15px;
@@ -313,16 +313,15 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
 
 .content-view {
     width: 100%;
-    max-width: 1200px; /* Puedes subirlo a 1400px o quitarlo si quieres full width */
+    max-width: 1200px;
     margin: 0 auto;
     padding: 40px;
     display: flex;
     flex-direction: column;
 }
 
-/* --- DIÁLOGO DE TEXTO (CHAT) AL ANCHO COMPLETO --- */
 #chat-container {
-    width: 100%; /* Ocupa todo el ancho del contenedor padre */
+    width: 100%;
     background-color: var(--panel-bg);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -341,24 +340,22 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
     gap: 12px;
 }
 
-/* Burbujas más anchas */
 .user-msg, .ai-msg {
-    max-width: 90%; /* Expandido para aprovechar el ancho */
+    max-width: 90%;
     padding: 12px 18px;
     border-radius: 12px;
 }
 
-/* --- SELECTOR DE DATASET ACCESIBLE --- */
 .dataset-radio-group {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Divide el ancho en dos columnas iguales */
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
     margin-top: 10px;
 }
 
 .dataset-option input[type="radio"] {
     position: absolute;
-    opacity: 0; /* Escondido pero accesible para lectores de pantalla */
+    opacity: 0;
 }
 
 .dataset-option label {
@@ -372,7 +369,6 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
     transition: all 0.2s ease;
 }
 
-/* Estilo cuando está seleccionado (Usando tu color amarillo neón) */
 .dataset-option input[type="radio"]:checked + label {
     border-color: var(--accent);
     background: rgba(226, 255, 0, 0.05);
