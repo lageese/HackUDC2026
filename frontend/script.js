@@ -128,6 +128,14 @@ document.getElementById('filter-input').onkeyup = function() {
     });
 };
 
+document.querySelectorAll('input[name="dataset-selection"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        // Actualizamos el input hidden que lee tu función sendQuery()
+        document.getElementById('dataset-select').value = e.target.value;
+        console.log("Dataset cambiado a:", e.target.value);
+    });
+});
+
 function renderizarRanking(data, explanation, weights = {}) {
     const chatMessages = document.getElementById('chat-messages');
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Platform | Denodo & Merlin</title>
+    <title> Docai </title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,18 +33,27 @@
                 <p class="subtitle">Análisis de datos en tiempo real mediante Denodo</p>
             </div>
             
-            <div class="dataset-container" style="margin-bottom: 20px;">
-                <label class="dataset-label" style="display: block; color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Dataset Activo</label>
-                
-                <ul id="dataset-list" class="dataset-list" role="listbox" aria-label="Selección de dataset">
-                    <li class="dataset-item selected" role="option" aria-selected="true" data-value="pokemon">
-                        🐉 Pokémon Database
-                        <span class="tick">✓</span>
-                    </li>
-                </ul>
+            <div class="dataset-container">
+    <label class="dataset-label" id="db-label">Dataset Activo</label>
+    
+    <div role="radiogroup" aria-labelledby="db-label" class="dataset-radio-group">
+        <div class="dataset-option">
+            <input type="radio" id="db-pokemon" name="dataset-selection" value="pokemon" checked>
+            <label for="db-pokemon">
+                <span class="icon">🐶</span> Pokémon Database
+            </label>
+        </div>
 
-                <input type="hidden" id="dataset-select" name="dataset_selected" value="admin.pokemon">
-            </div>
+        <div class="dataset-option">
+            <input type="radio" id="db-digimon" name="dataset-selection" value="digimon">
+            <label for="db-digimon">
+                <span class="icon">🐉</span> Digimon Database
+            </label>
+        </div>
+    </div>
+
+    <input type="hidden" id="dataset-select" value="pokemon">
+    </div>
 
             <div id="chat-container">
                 <div id="chat-messages">
