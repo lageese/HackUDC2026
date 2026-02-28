@@ -380,3 +380,37 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
     border-color: #444;
 }
 
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    /* ... resto de tus estilos ... */
+}
+
+.sidebar-footer {
+    margin-top: auto; /* Esto empuja el footer al fondo del sidebar */
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.footer-credits b {
+    color: var(--text);
+}
+
+.accent-text {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.license-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: var(--text-dim);
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.license-link:hover {
+    color: var(--accent);
+}
