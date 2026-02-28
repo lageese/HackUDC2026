@@ -1,3 +1,7 @@
+//  SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Los Papus de la Hack
+
+
 function switchTab(view) {
     const aiView = document.getElementById('ai-view');
     const docsView = document.getElementById('docs-view');

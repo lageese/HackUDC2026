@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Los Papus de la Hack
+
 #Define los "endpoints" que escuchará tu web (ej: /api/judge).
 
 #Recibe la pregunta del usuario (ej: "Necesito un counter para Blastoise").
