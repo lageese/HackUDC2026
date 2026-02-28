@@ -179,3 +179,97 @@ function renderizarRanking(data, explanation, weights = {}) {
     // 5. Scroll automático hacia abajo para ver el nuevo mensaje
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
+// Función de validación para CSV
+function validarYProcesar(file) {
+    if (!file) return;
+
+    // Comprobamos extensión .csv
+    if (file.name.toLowerCase().endsWith('.csv')) {
+        procesarDocumento(file);
+    } else {
+        alert("⚠️ Formato no soportado. Por favor, sube un archivo .csv");
+    }
+}
+
+// Añadir a la tabla (Simulacro)
+async function procesarDocumento(file) {
+    const lista = document.getElementById('document-list');
+    const nuevaFila = document.createElement('tr');
+    const idUnico = "doc-" + Date.now();
+    nuevaFila.id = idUnico;
+
+    const fecha = new Date().toLocaleString();
+    const tamano = (file.size / 1024).toFixed(2) + " KB";
+
+    nuevaFila.innerHTML = `
+        <td><strong>${file.name}</strong></td>
+        <td><span class="tag processing">🤖 IA Clasificando...</span></td>
+        <td>${fecha}</td>
+    `;
+    lista.appendChild(nuevaFila);
+
+    let categoriaFinal = "Desconocida";
+    let razonIA = "No se pudo clasificar";
+
+    try {
+
+        const payload = {
+            headers: [`Archivo: ${file.name}`],
+            sample_data: ["Sin datos de ejemplo"]
+        };
+
+        const response = await fetch('http://localhost:8000/api/clasificar-csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        console.log("Respuesta backend:", data);
+
+        categoriaFinal = data.categoria || "Sin categoría";
+        razonIA = data.razon || "Clasificado por IA";
+
+    } catch (error) {
+        console.error("Error clasificando con IA:", error);
+        categoriaFinal = "Error de IA";
+    }
+
+    const filaReal = document.getElementById(idUnico);
+    filaReal.innerHTML = `
+        <td><strong>${file.name}</strong> (${tamano})</td>
+        <td><span class="tag success">${categoriaFinal}</span></td>
+        <td>${fecha}</td>
+    `;
+
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML += `
+        <div class="ai-msg">
+            <strong>SISTEMA:</strong> He procesado <em>${file.name}</em>.<br>
+            • <strong>Clasificación IA:</strong> ${categoriaFinal}.<br>
+            • <strong>Razón:</strong> ${razonIA}.
+        </div>
+    `;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+document.getElementById('filter-input').onkeyup = function() {
+    const valor = this.value.toLowerCase();
+    const filas = document.querySelectorAll('#document-table tbody tr');
+    let encontrados = 0;
+    
+    filas.forEach(fila => {
+        const texto = fila.innerText.toLowerCase();
+        if(texto.includes(valor)) {
+            fila.style.display = '';
+            fila.style.backgroundColor = valor !== "" ? "rgba(46, 204, 113, 0.1)" : ""; // Resaltado suave
+            encontrados++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+
+    // Pequeño feedback de cuántos documentos hay
+    console.log(`Filtrando: ${encontrados} documentos encontrados.`);
+};
