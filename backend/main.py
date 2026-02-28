@@ -72,8 +72,6 @@ def decide(req: DecideRequest):
             raise HTTPException(status_code=404, detail=f"No se encontró ninguna tabla relacionada con '{req.topic}'.")
         
         tabla_limpia = datasource.split(".")[-1] # Obtenemos solo el nombre de la tabla sin el prefijo del datasource
-        print(f"DEBUG: Tabla encontrada -> {tabla_limpia}")
-        print(f"DEBUG: DATASOURCE -> {datasource}")
 
         if req.topic.lower() not in tabla_limpia.lower():
             raise HTTPException(status_code=400, detail=f"La tabla encontrada '{tabla_limpia}' no parece relevante para el tema '{req.topic}'.")
@@ -89,8 +87,6 @@ def decide(req: DecideRequest):
     todas_las_cols = [f'"{display_col}"'] + [f'"{c}"' for c in columnas_puntos]
 
     columnas_sql = ", ".join([f'"{c}"' for c in todas_las_cols])
-
-    print(f"DEBUG: Columnas que vamos a pedir -> {columnas_sql}")
 
     where_clause = ""
     if req.filters:
@@ -109,12 +105,10 @@ def decide(req: DecideRequest):
     
     # Montamos la query final (usamos view_full_name que tiene el admin.)
     data_q = f"SELECT {columnas_sql} FROM {datasource}{where_clause} LIMIT 10"
-    print(f"DEBUG: Query final de datos -> {data_q}")
     
     try:
         # Llamamos al SDK para obtener los datos reales
         data_res = sdk.answer_data_question(data_q)
-        print(f"DEBUG: ROWS -> {data_res}")
         
         # Extraemos las filas de la respuesta (usando la funcion auxiliar)
         # Asegúrate de tener definida _extract_rows fuera de 'decide'
@@ -122,8 +116,6 @@ def decide(req: DecideRequest):
         
         if not rows:
             return {"message": "No se encontraron elementos con esos filtros", "results": []}
-            
-        print(f"DEBUG: Hemos recuperado {len(rows)} filas de Denodo")
 
     except HTTPException as he:
         raise he
@@ -169,41 +161,31 @@ def interpret_query(req: InterpretRequest):
         # Esto le dice a la IA qué columnas tiene esa tabla específicamente
         meta_q = f"Describe columns for the table {req.dataset}"
         meta_res = sdk.answer_metadata_question(meta_q)
-        print(f"DEBUG: Respuesta de metadata -> {meta_res}")
         
         views = meta_res.get("execution_result", {}).get("views", [])
         if not views:
             raise HTTPException(status_code=404, detail="Tabla no encontrada")
 
         columnas = [c['columnName'] for c in views[0]['view_json']['schema']]
-        print(f"DEBUG: Columnas obtenidas para {req.dataset} -> {columnas}")
 
         # PASO 2: Traducción Directa
         # Usamos un prompt ultra-estricto para evitar textos de relleno
         prompt_maestro = f"""
-        Actúa como un experto en mapeo de datos SQL. 
-        Dataset actual: {req.dataset}
-        Columnas disponibles (ESTRICTAMENTE SOLO ESTAS): {columnas}
+        Dataset: {req.dataset}
+        Columns: {columnas}
+        User Query: "{req.prompt}"
 
-        Tu tarea es transformar la consulta del usuario en una configuración de filtros y pesos.
-
-        REGLAS DE ORO:
-        1. 'display_column': Identifica qué columna contiene el nombre o identificador principal del elemento.
-        2. 'filters': Usa nombres de columna EXACTOS. Si el valor es texto, usa la capitalización correcta.
-        3. 'scoring_weights': 
-        - SOLO usa columnas numéricas presentes en la lista anterior.
-        - JAMÁS inventes columnas. Si no hay una columna numérica relevante, deja este objeto vacío {{}}.
-        4. 'top_k': El número de resultados solicitado (por defecto 3).
-
-        RESPUESTA:
-        Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura:
+        Instructions:
+        1. If the query cannot be answered with these columns, return: {{"error": "incompatible"}}
+        2. Otherwise, return ONLY a JSON with this structure:
+        3. 'display_column' is the column with the name of the element (e.g., name).
         {{
-        "topic": "{req.dataset}",
-        "display_column": "nombre_columna",
-        "filters": {{}},
-        "scoring_weights": {{}},
-        "explanation": "Breve explicación de los criterios usados",
-        "top_k": int
+          "topic": "{req.dataset}",
+          "display_column": "column_name",
+          "filters": {{"column": "value"}},
+          "scoring_weights": {{"numeric_column": 1.0}},
+          "explanation": "short text",
+          "top_k": int
         }}
         """
 
