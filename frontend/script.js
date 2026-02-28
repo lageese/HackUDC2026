@@ -28,13 +28,23 @@ async function sendQuery() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 topic: data.topic,
+                display_column: data.display_column,
                 filters: data.filters || {},
                 scoring_weights: data.scoring_weights || {},
                 top_k: data.top_k
             })
         });
 
-        if (!decideRes.ok) throw new Error("Error al obtener ranking");
+        if(decideRes.status === 400) {
+            const errorData = await decideRes.json();
+            throw new Error(errorData.detail || "La tabla no es relevante");
+        }
+
+        if (decideRes.status === 502) {
+            const errorData = await decideRes.json();
+            throw new Error(errorData.detail || "Error al buscar la tabla :/");
+        }
+        
         const finalData = await decideRes.json();
 
         document.getElementById(loadingId).remove();
@@ -122,7 +132,7 @@ function renderizarRanking(data, explanation, weights = {}) {
         // 3. Iteramos sobre los resultados
         data.ganadores.forEach((item, index) => {
             const icon = medals[index] || "·"; // Si hay más de 3, usa un punto
-            const scoreDisplay = hasScore ? `<span style="color: #4a9eff; font-size: 0.9em; margin-left: 10px;">(Puntuación: ${item.score})</span>` : "";
+            const scoreDisplay = hasScore ? `<span class="score-tag">(Puntuación: ${item.score})</span>` : "";
             
             html += `
                 <div class="ranking-item" style="margin-bottom: 8px;">

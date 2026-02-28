@@ -14,7 +14,8 @@ from sdk import DenodoAISDKClient
 import json
 
 class DecideRequest(BaseModel):
-    topic: str                    
+    topic: str 
+    display_column: str              
     filters: Dict[str, Any]       
     scoring_weights: Dict[str, float] 
     top_k: int    
@@ -62,19 +63,17 @@ def home():
 @app.post("/decide")
 def decide(req: DecideRequest):
     # Aqui la ia nos responderá con el nombre de la vista del datasource
-    meta_q = f"Identify the technical view name in Denodo that contains information about '{req.topic}'."
     
     try:
-        # SDK buscará en los metadatos
-        meta_res = sdk.answer_metadata_question(meta_q)
-
-        datasource = meta_res.get("tables_used", [None])[0] # Obtenemos la primera tabla usada (admin.tabla), o None si no hay tablas
+        # La base de datos será la escogida por el usuario
+        datasource = req.topic
         
         if not datasource:
             raise HTTPException(status_code=404, detail=f"No se encontró ninguna tabla relacionada con '{req.topic}'.")
         
         tabla_limpia = datasource.split(".")[-1] # Obtenemos solo el nombre de la tabla sin el prefijo del datasource
         print(f"DEBUG: Tabla encontrada -> {tabla_limpia}")
+        print(f"DEBUG: DATASOURCE -> {datasource}")
 
         if req.topic.lower() not in tabla_limpia.lower():
             raise HTTPException(status_code=400, detail=f"La tabla encontrada '{tabla_limpia}' no parece relevante para el tema '{req.topic}'.")
@@ -84,9 +83,10 @@ def decide(req: DecideRequest):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Error al buscar la tabla: {str(e)}")
     
+    display_col = req.display_column
     columnas_puntos = list(req.scoring_weights.keys())
 
-    todas_las_cols = ["name"] + columnas_puntos
+    todas_las_cols = [f'"{display_col}"'] + [f'"{c}"' for c in columnas_puntos]
 
     columnas_sql = ", ".join([f'"{c}"' for c in todas_las_cols])
 
@@ -133,6 +133,7 @@ def decide(req: DecideRequest):
     ranking = []
     for item in rows:
         score = 0
+        nombre_real = item.get(display_col, "Desconocido")
         # Normalizamos las llaves a minúsculas para evitar fallos de Case Sensitivity
         item_lower = {k.lower(): v for k, v in item.items()}
         
@@ -144,7 +145,7 @@ def decide(req: DecideRequest):
                 continue
         
         ranking.append({
-            "name": item_lower.get("name", "Unknown"),
+            "name": nombre_real,
             "score": round(score, 2)
         })
 
@@ -168,29 +169,41 @@ def interpret_query(req: InterpretRequest):
         # Esto le dice a la IA qué columnas tiene esa tabla específicamente
         meta_q = f"Describe columns for the table {req.dataset}"
         meta_res = sdk.answer_metadata_question(meta_q)
+        print(f"DEBUG: Respuesta de metadata -> {meta_res}")
         
         views = meta_res.get("execution_result", {}).get("views", [])
         if not views:
             raise HTTPException(status_code=404, detail="Tabla no encontrada")
 
         columnas = [c['columnName'] for c in views[0]['view_json']['schema']]
+        print(f"DEBUG: Columnas obtenidas para {req.dataset} -> {columnas}")
 
         # PASO 2: Traducción Directa
         # Usamos un prompt ultra-estricto para evitar textos de relleno
         prompt_maestro = f"""
-        Dataset: {req.dataset}
-        Columns: {columnas}
-        User Query: "{req.prompt}"
+        Actúa como un experto en mapeo de datos SQL. 
+        Dataset actual: {req.dataset}
+        Columnas disponibles (ESTRICTAMENTE SOLO ESTAS): {columnas}
 
-        Instructions:
-        1. If the query cannot be answered with these columns, return: {{"error": "incompatible"}}
-        2. Otherwise, return ONLY a JSON with this structure:
+        Tu tarea es transformar la consulta del usuario en una configuración de filtros y pesos.
+
+        REGLAS DE ORO:
+        1. 'display_column': Identifica qué columna contiene el nombre o identificador principal del elemento.
+        2. 'filters': Usa nombres de columna EXACTOS. Si el valor es texto, usa la capitalización correcta.
+        3. 'scoring_weights': 
+        - SOLO usa columnas numéricas presentes en la lista anterior.
+        - JAMÁS inventes columnas. Si no hay una columna numérica relevante, deja este objeto vacío {{}}.
+        4. 'top_k': El número de resultados solicitado (por defecto 3).
+
+        RESPUESTA:
+        Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura:
         {{
-          "topic": "{req.dataset}",
-          "filters": {{"column": "value"}},
-          "scoring_weights": {{"numeric_column": 1.0}},
-          "explanation": "short text",
-          "top_k": int
+        "topic": "{req.dataset}",
+        "display_column": "nombre_columna",
+        "filters": {{}},
+        "scoring_weights": {{}},
+        "explanation": "Breve explicación de los criterios usados",
+        "top_k": int
         }}
         """
 
