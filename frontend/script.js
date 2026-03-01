@@ -310,3 +310,32 @@ document.getElementById('filter-input').onkeyup = function() {
 
     console.log(`Filtrando: ${encontrados} documentos encontrados.`);
 };
+
+// Verificamos el estado del backend
+const STATUS_URL = window.location.hostname === "localhost" 
+    ? "http://localhost:8000/" 
+    : "https://electrophysiologic-marisha-unschematised.ngrok-free.dev/";
+
+async function checkBackendStatus() {
+    const dot = document.getElementById('status-dot');
+    const badge = document.getElementById('status-badge');
+
+    try {
+        const response = await fetch(STATUS_URL, { method: 'GET' });
+
+        if (response.ok) {
+            dot.classList.remove('offline');
+            dot.classList.add('online');
+            badge.innerText = "SISTEMA ACTIVO";
+        } else {
+            throw new Error();
+        }
+    } catch (error) {
+        dot.classList.remove('online');
+        dot.classList.add('offline');
+        badge.innerText = "SISTEMA OFFLINE";
+    }
+}
+
+checkBackendStatus();
+setInterval(checkBackendStatus, 10000); // Verificamos el estado cada 10 segundos
