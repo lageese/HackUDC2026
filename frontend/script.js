@@ -88,7 +88,7 @@ dropZone.onclick = () => fileInput.click();
 fileInput.onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
-        procesarDocumento(file);
+        validarYProcesar(file);
     }
 };
 
@@ -105,7 +105,7 @@ dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file) procesarDocumento(file);
+    if (file) validarYProcesar(file);
 });
 
 async function procesarDocumento(file) {
