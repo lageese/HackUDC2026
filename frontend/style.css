@@ -414,3 +414,31 @@ td:last-child { border-right: 1px solid var(--border); border-radius: 0 12px 12p
 .license-link:hover {
     color: var(--accent);
 }
+
+.dot {
+    height: 10px;
+    width: 10px;
+    background-color: #666;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px rgba(102, 102, 102, 0.5);
+}
+
+.dot.online {
+    background-color: #2ecc71;
+    box-shadow: 0 0 10px #2ecc71, 0 0 20px rgba(46, 204, 113, 0.4);
+}
+
+.dot.offline {
+    background-color: #ff4757;
+    box-shadow: 0 0 10px #ff4757, 0 0 20px rgba(255, 71, 87, 0.4);
+}
+
+.brand-container {
+    margin-bottom: 40px; 
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
