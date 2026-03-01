@@ -35,7 +35,7 @@ async function sendQuery() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
     try {
-        const response = await fetch('http://localhost:8000/interpret', {
+        const response = await fetch('https://electrophysiologic-marisha-unschematised.ngrok-free.dev/interpret', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: query, dataset: document.getElementById('dataset-select').value.replace('admin.', '') })
@@ -45,7 +45,7 @@ async function sendQuery() {
         const data = await response.json();
         console.log("Respuesta de interpretación:", data);
 
-        const decideRes = await fetch('http://localhost:8000/decide', {
+        const decideRes = await fetch('https://electrophysiologic-marisha-unschematised.ngrok-free.dev/decide', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -126,7 +126,7 @@ async function procesarDocumento(file) {
 
     try {
         // Llamamos al nuevo endpoint que vamos a crear en FastAPI
-        const response = await fetch('http://localhost:8000/api/upload-csv', {
+        const response = await fetch('https://electrophysiologic-marisha-unschematised.ngrok-free.dev/api/upload-csv', {
             method: 'POST',
             body: formData
         });
@@ -248,7 +248,7 @@ async function procesarDocumento(file) {
             sample_data: ["Sin datos de ejemplo"]
         };
 
-        const response = await fetch('http://localhost:8000/api/clasificar-csv', {
+        const response = await fetch('https://electrophysiologic-marisha-unschematised.ngrok-free.dev/api/clasificar-csv', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
