@@ -14,6 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Dict
 from sdk import DenodoAISDKClient
+from fastapi import UploadFile, File
+import shutil
+import subprocess
+import os
 import ollama
 import json
 
@@ -272,3 +276,35 @@ def interpret_query(req: InterpretRequest):
         if isinstance(e, HTTPException): raise e
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Error en la interpretación")
+    
+
+@app.post("/api/upload-csv")
+async def upload_csv(file: UploadFile = File(...)):
+    # 1. Guardar el archivo físico en el servidor
+    # Aseguraos de que esta ruta es la misma de donde Denodo lee los CSVs
+    file_location = f"./datos_csv/{file.filename}" 
+    os.makedirs("./datos_csv", exist_ok=True)
+    
+    with open(file_location, "wb+") as file_object:
+        shutil.copyfileobj(file.file, file_object)
+        
+    # 2. (Opcional) Leer las primeras líneas para pasárselas a Ollama
+    # Aquí podéis llamar a vuestra lógica de Ollama usando pandas o csv reader
+    categoria = "Automotriz" # Ejemplo simulado
+    
+    # 3. EL "HACK" PARA DENODO: Mover el archivo al contenedor
+    # El documento oficial de Denodo sugiere usar docker cp:
+    contenedor_denodo = "denodo-platform" # Cambiad esto por el ID/nombre real
+    ruta_dentro = "/home"
+    comando_cp = f"docker cp {file_location} {contenedor_denodo}:{ruta_dentro}"
+    # subprocess.run(comando_cp.split()) # Descomentar para ejecutar
+    
+    # 4. REINICIAR EL CHATBOT DE DENODO
+    # Como indica el manual, esto es obligatorio para que el chatbot conozca la información nueva
+    try:
+        subprocess.run(["docker", "rm", "-f", "denodo-ai-sdk-chatbot"], check=True)
+        subprocess.run(["docker", "compose", "-f", "docker-compose-sample-chatbot.yml", "up", "-d"], check=True)
+    except Exception as e:
+        print("Aviso: No se pudo reiniciar Docker. ¿Estáis corriendo esto en el mismo host?", e)
+
+    return {"categoria": categoria, "mensaje": "Subido y chatbot reiniciado"}

@@ -108,7 +108,7 @@ dropZone.addEventListener('drop', (e) => {
     if (file) procesarDocumento(file);
 });
 
-function procesarDocumento(file) {
+async function procesarDocumento(file) {
     const lista = document.getElementById('document-list');
     const nuevaFila = document.createElement('tr');
     
@@ -120,6 +120,43 @@ function procesarDocumento(file) {
     `;
     
     lista.appendChild(nuevaFila);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        // Llamamos al nuevo endpoint que vamos a crear en FastAPI
+        const response = await fetch('http://localhost:8000/api/upload-csv', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        console.log("Respuesta backend:", data);
+        
+        // ... (actualizar la UI con la categoría que devuelva el backend) ...
+        
+        // ¡Magia para el Chat! Añadimos el nuevo CSV como opción en los radio buttons
+        const radioGroup = document.querySelector('.dataset-radio-group');
+        const cleanName = file.name.replace('.csv', '');
+        radioGroup.innerHTML += `
+            <div class="dataset-option">
+                <input type="radio" id="db-${cleanName}" name="dataset-selection" value="${cleanName}">
+                <label for="db-${cleanName}">
+                    <span class="icon">📄</span> ${file.name}
+                </label>
+            </div>
+        `;
+        // Reasignamos los event listeners a los nuevos radio buttons
+        document.querySelectorAll('input[name="dataset-selection"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('dataset-select').value = e.target.value;
+            });
+        });
+
+    } catch (error) {
+        console.error("Error subiendo el CSV:", error);
+    }
 }
 
 document.getElementById('filter-input').onkeyup = function() {
